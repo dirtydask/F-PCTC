@@ -1,32 +1,4 @@
-﻿function Get-Links {
-    
-
-    param ($Path)
-
-    $source =  gc $Path  # gc C:\Users\1126733220A\Downloads\html.txt 
-
-    $urls = $source -split " " | Select-String url=
-
-    $urls = $urls -replace "url=","" 
-
-    $urls = $urls -replace "launch","playercontentcontainer"
-
-    $urls = $urls -replace '"',''
-
-    $array = @()
-
-    foreach ($i in $urls) {
-    
-        $url = "https://pctc.cyberforce.site" + $i
-
-        $url = '"' + $url + '",'
-        
-        $array += $url 
-
-    }
-
-    $array 
-}
+﻿#region - URLs
 
 $all = @(
 "https://pctc.cyberforce.site/lms/playercontents/11461/scripting-basics-overview/playercontentcontainer/346/2056/9406",
@@ -1383,6 +1355,40 @@ $module13 = @(
 "https://pctc.cyberforce.site/lms/playercontents/16831/cehv9-prep-practice-exam/playercontentcontainer/545/2868/14159"
 )
 
+#endregion
+
+#region - functions
+
+function Get-Links {
+    
+
+    param ($Path)
+
+    $source =  gc $Path  # gc C:\Users\1126733220A\Downloads\html.txt 
+
+    $urls = $source -split " " | Select-String url=
+
+    $urls = $urls -replace "url=","" 
+
+    $urls = $urls -replace "launch","playercontentcontainer"
+
+    $urls = $urls -replace '"',''
+
+    $array = @()
+
+    foreach ($i in $urls) {
+    
+        $url = "https://pctc.cyberforce.site" + $i
+
+        $url = '"' + $url + '",'
+        
+        $array += $url 
+
+    }
+
+    $array 
+}
+
 function Login-PCTC {
 
 
@@ -1391,9 +1397,10 @@ function Login-PCTC {
 
 }
 
+
 function Start-PCTC {
 
-    param ($module)
+    param ($module,[int] $MaxThreads = 15)
 
     $cmd = {
         
@@ -1406,29 +1413,58 @@ function Start-PCTC {
 
     }
 
-    $i = 0
-    $count = ($module).count
-    $module | foreach {
-        $i++
-        Start-Job -ScriptBlock $cmd -ArgumentList $_ -Name $_ 
- 	    Write-Progress -Activity "Creating threads" -percentcomplete ($i/$count * 100) -status "Waiting for threads to load"
+    # Create Runspace for Threading
+    $RunspacePool = [RunspaceFactory]::CreateRunspacePool(1, $MaxThreads)
+    $RunspacePool.open()
+    $Jobs =@()
+
+    # Create Thread For Each Target
+    Write-Host " [*] Starting $($module.count) Threads"
+    foreach ($Target in $module) {
+
+        $Job = [Powershell]::Create().AddScript($cmd).AddArgument($Target)
+        $Job.RunspacePool = $RunspacePool
+        $Jobs += New-Object psobject -Property @{
+            Target = $Target
+            Pipe = $Job
+            Result = $Job.BeginInvoke()    
+        }
 
     }
 
-    while ((Get-Job -State Running).count -gt 0) {
+    # Wait For Completion
+    Write-Host " [*] Executing PCTC bypass..."
+    write-host ""
+    
+    <#
+    do {
+        [int]$completed = ($jobs.Result.IsCompleted -eq $True).Count
+        [int]$total = ($Jobs).count
+        Write-Progress -Activity "FUCK PCTC" -Status "Waiting for tasks to complete" -PercentComplete ($completed/$total * 100)
+        Start-Sleep -Seconds 3 }
+    while ($Jobs.Result.IsCompleted -contains $false )       
+    #>
 
-	    [int]$completed = (Get-Job -state completed).count
-	    [int]$total = (Get-Job).count
-	    [int]$running = (Get-Job -state running).count
-	    Write-Progress -Activity "FUCK PCTC" -percentcomplete ($completed/$total * 100) -status "Waiting for tasks to complete" -CurrentOperation "$total threads created - $running threads open"
-
-        Start-Sleep -Seconds 3
-
+    Do {
+        [int]$completed = ($Jobs | where-object {$_.Result.IsCompleted -eq $True}).Count
+        [int] $total = $Jobs.count
+        Write-Host " [*] $(Get-Date -Format hh:mm:ss) - $completed of $total Complete";Start-Sleep -Seconds 3
     }
+    while ($Jobs.Result.IsCompleted -contains $false )
+    Write-Host " [+] All Jobs Complete"
 
+
+    $a = New-Object -ComObject wscript.shell
+    $b = $a.Popup("Script completed", 0, "Done", 4096)
 
 
 }
+
+
+
+#endregion
+
+#region - Menu
 
 Function Menu{
 cls
@@ -1473,11 +1509,7 @@ cls
                     '1' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
+
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module1                
@@ -1487,11 +1519,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module2                
                     write-host ""   
@@ -1499,11 +1526,6 @@ cls
               } '3' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module3              
@@ -1513,11 +1535,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module4                
                     write-host ""   
@@ -1525,11 +1542,6 @@ cls
               } '5' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module5                
@@ -1539,11 +1551,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module6               
                     write-host ""   
@@ -1551,11 +1558,6 @@ cls
               } '7' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module7                
@@ -1565,11 +1567,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module8                
                     write-host ""   
@@ -1577,11 +1574,6 @@ cls
               } '9' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module9                
@@ -1591,11 +1583,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module10                
                     write-host ""   
@@ -1603,11 +1590,6 @@ cls
               } '11' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module11                
@@ -1617,11 +1599,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module12                
                     write-host ""   
@@ -1630,11 +1607,6 @@ cls
                     
                     cls
                     Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $module13                
                     write-host ""   
@@ -1642,11 +1614,6 @@ cls
               } '14' {
                     
                     cls
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
-                    Write-Host ""
                     Write-Host ""
                     Write-Host " [*] Running scripts..."
                     Start-PCTC -module $all                
@@ -1750,5 +1717,6 @@ Created by @dirty_dask
          
  }
  
+ #endregion
 
  Menu
